@@ -745,6 +745,32 @@
           <button type="submit" class="form-submit" id="btn-signup">Create My NUTECH Vault Account</button>
         </form>
 
+        <!-- OTP Verification Box — shown after successful signup -->
+        <div id="otp-verify-box" style="display:none;margin-top:20px;padding:20px;background:rgba(15,74,51,0.06);border:1.5px solid rgba(15,74,51,0.18);border-radius:12px">
+          <div style="font-size:14px;font-weight:600;color:var(--green-dark);margin-bottom:6px">📧 Check your email</div>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">
+            We sent a <strong>6-digit verification code</strong> to <span id="otp-email-display" style="color:var(--green-dark);font-weight:600"></span>. Enter it below to activate your account. The code expires in <strong>10 minutes</strong> and can only be used once.
+          </p>
+          <div id="otp-alert" class="form-error" style="display:none;margin-bottom:12px"></div>
+          <form id="otp-form" novalidate>
+            <div class="form-group" style="margin-bottom:12px">
+              <label class="form-label" for="otp-code">Verification Code <span style="color:var(--gold)">*</span></label>
+              <input type="text" id="otp-code" class="form-input"
+                     placeholder="Enter 6-digit code"
+                     maxlength="6"
+                     inputmode="numeric"
+                     autocomplete="one-time-code"
+                     style="font-size:22px;letter-spacing:6px;text-align:center;font-weight:700"
+                     required>
+            </div>
+            <button type="submit" class="form-submit" id="btn-verify-otp" style="margin-bottom:0">Verify &amp; Activate Account</button>
+          </form>
+          <p style="font-size:12px;color:var(--text-muted);margin-top:12px;text-align:center">
+            Didn't receive it? Check your spam folder, or
+            <a id="otp-resend-link" onclick="resendOtp()" style="color:var(--green);cursor:pointer;text-decoration:underline">resend the code</a>.
+          </p>
+        </div>
+
         <p class="form-footer-link" style="margin-top:18px">
           Already have an account? <a onclick="showPage('login')" style="cursor:pointer">Sign in here</a>
         </p>
