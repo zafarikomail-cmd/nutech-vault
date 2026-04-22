@@ -35,6 +35,52 @@
 
 <!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- JSON-LD: Google Search logo, description, and organization info -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "NUTECH Vault",
+  "url": "https://nutech-vault.netlify.app/",
+  "description": "NUTECH Vault is a free digital memory platform for students, faculty, and alumni of the National University of Technology (NUTECH), Islamabad. Capture, share, and relive your university memories.",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://nutech-vault.netlify.app/?q={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "NUTECH Vault",
+  "url": "https://nutech-vault.netlify.app/",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://nutech-vault.netlify.app/IMG_2623.png",
+    "width": 512,
+    "height": 512
+  },
+  "description": "A free digital memory platform for NUTECH students, faculty, and alumni. Preserve and share your university moments — lectures, events, friendships, and milestones — all in one safe place.",
+  "sameAs": [
+    "https://github.com/zafarikomail-cmd/nutech-vault"
+  ],
+  "foundingDate": "2025",
+  "areaServed": "Islamabad, Pakistan",
+  "knowsAbout": [
+    "University Memories",
+    "NUTECH",
+    "National University of Technology",
+    "Student Archives",
+    "Academic Events"
+  ]
+}
+</script>
 </head>
 <body>
 
