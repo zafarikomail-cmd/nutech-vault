@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://nutech-vault.pages.dev/sitemap.xml
