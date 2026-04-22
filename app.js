@@ -377,7 +377,7 @@ document.getElementById('otp-form').addEventListener('submit', async (e) => {
   const { data, error } = await supabaseClient.auth.verifyOtp({
     email: pendingOtpEmail,
     token: token,
-    type:  'signup'
+    type:  'email'
   });
 
   setLoading('btn-verify-otp', false, 'Verify & Activate Account');
