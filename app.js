@@ -325,7 +325,7 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
   }
 
   if (data.session) {
-    // Explicitly upsert profile data in case the DB trigger was delayed or missed
+    // Supabase confirmed instantly (email confirmation disabled in dashboard) — go straight in
     await supabaseClient.from('profiles').upsert({
       id:         data.user.id,
       full_name:  fullName,
@@ -337,12 +337,119 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     showToast('🎉 Welcome to NUTECH Vault! Your account has been created successfully.', 'success');
     showPage('memories');
   } else {
-    showAlert('signup-alert',
-      '✅ Account created! Please check your email inbox and click the confirmation link before signing in.',
-      'success');
-    document.getElementById('signup-form').reset();
+    // ── OTP flow: store email for the verifyOtp call, then show the OTP box ──
+    pendingOtpEmail = email;
+    document.getElementById('signup-form').style.display = 'none';
+    document.getElementById('signup-alert').style.display = 'none';
+    document.getElementById('otp-email-display').textContent = email;
+    document.getElementById('otp-verify-box').style.display = 'block';
+    document.getElementById('otp-code').focus();
   }
 });
+
+// ── Pending email stored for OTP verification ─────────
+let pendingOtpEmail = '';
+
+// ── OTP Verification ──────────────────────────────────
+document.getElementById('otp-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const alertEl = document.getElementById('otp-alert');
+  alertEl.style.display = 'none';
+
+  const token = document.getElementById('otp-code').value.trim().replace(/\s/g, '');
+
+  if (!token || token.length < 6) {
+    alertEl.className = 'alert alert-error';
+    alertEl.innerHTML = '<span>⚠️</span> Please enter the 6-digit code from your email.';
+    alertEl.style.display = 'flex';
+    return;
+  }
+
+  if (!pendingOtpEmail) {
+    alertEl.className = 'alert alert-error';
+    alertEl.innerHTML = '<span>⚠️</span> Session expired. Please sign up again.';
+    alertEl.style.display = 'flex';
+    return;
+  }
+
+  setLoading('btn-verify-otp', true, 'Verifying…');
+
+  const { data, error } = await supabaseClient.auth.verifyOtp({
+    email: pendingOtpEmail,
+    token: token,
+    type:  'signup'
+  });
+
+  setLoading('btn-verify-otp', false, 'Verify & Activate Account');
+
+  if (error) {
+    alertEl.className = 'alert alert-error';
+    const msg = error.message.toLowerCase();
+    if (msg.includes('expired') || msg.includes('invalid') || msg.includes('not found')) {
+      alertEl.innerHTML = '<span>⚠️</span> Invalid or expired code. Please request a new one using the resend link below.';
+    } else {
+      alertEl.innerHTML = `<span>⚠️</span> ${escapeHTML(error.message)}`;
+    }
+    alertEl.style.display = 'flex';
+    document.getElementById('otp-code').value = '';
+    document.getElementById('otp-code').focus();
+    return;
+  }
+
+  // ── Success: upsert profile then navigate ─────────────
+  if (data?.user) {
+    try {
+      await supabaseClient.from('profiles').upsert({
+        id:         data.user.id,
+        full_name:  data.user.user_metadata?.full_name  || null,
+        student_id: data.user.user_metadata?.student_id || null,
+        department: data.user.user_metadata?.department || null,
+        batch_year: data.user.user_metadata?.batch_year
+                      ? parseInt(data.user.user_metadata.batch_year) : null
+      }, { onConflict: 'id' });
+    } catch (_) {}
+  }
+
+  pendingOtpEmail = '';
+  showToast('🎉 Email verified! Welcome to NUTECH Vault.', 'success');
+  // Reset signup form for next time
+  document.getElementById('signup-form').style.display = '';
+  document.getElementById('otp-verify-box').style.display = 'none';
+  document.getElementById('signup-form').reset();
+  showPage('memories');
+});
+
+// ── Resend OTP ────────────────────────────────────────
+async function resendOtp() {
+  if (!pendingOtpEmail) return;
+
+  const alertEl = document.getElementById('otp-alert');
+  alertEl.style.display = 'none';
+
+  const resendLink = document.getElementById('otp-resend-link');
+  resendLink.style.pointerEvents = 'none';
+  resendLink.textContent = 'Sending…';
+
+  const { error } = await supabaseClient.auth.resend({
+    type:  'signup',
+    email: pendingOtpEmail
+  });
+
+  resendLink.textContent = 'resend the code';
+  resendLink.style.pointerEvents = '';
+
+  if (error) {
+    alertEl.className = 'alert alert-error';
+    alertEl.innerHTML = `<span>⚠️</span> ${escapeHTML(error.message)}`;
+    alertEl.style.display = 'flex';
+  } else {
+    alertEl.className = 'alert alert-success';
+    alertEl.innerHTML = '<span>✅</span> A new code has been sent to your email.';
+    alertEl.style.display = 'flex';
+    document.getElementById('otp-code').value = '';
+    document.getElementById('otp-code').focus();
+  }
+}
 
 // ── Sign In ───────────────────────────────────────────────
 document.getElementById('login-form').addEventListener('submit', async (e) => {
