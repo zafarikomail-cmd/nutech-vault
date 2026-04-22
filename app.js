@@ -721,13 +721,14 @@ async function toggleLike(memoryId, btn) {
     return;
   }
 
-  // Disable button during operation to prevent double-clicks
+  // Prevent double-clicks
+  if (btn.disabled) return;
   btn.disabled = true;
 
   try {
     const countSpan = btn.querySelector('span');
 
-    // Check if user already liked this memory
+    // Check existing like
     const { data: existingLike } = await supabaseClient
       .from('likes')
       .select('id')
@@ -735,24 +736,20 @@ async function toggleLike(memoryId, btn) {
       .eq('user_id', currentUser.id)
       .maybeSingle();
 
-    // Fetch real current like count from DB to avoid stale UI counts
+    // Always fetch real count from DB (never trust the UI span alone)
     const { data: memRow } = await supabaseClient
       .from('memories')
       .select('likes')
       .eq('id', memoryId)
       .maybeSingle();
-    const realCount = (memRow && memRow.likes) ? memRow.likes : 0;
+    const realCount = parseInt((memRow && memRow.likes) ? memRow.likes : 0) || 0;
 
     if (existingLike) {
       const newCount = Math.max(0, realCount - 1);
       btn.classList.remove('liked');
       countSpan.textContent = newCount;
-
       await supabaseClient.from('likes').delete().eq('id', existingLike.id);
-      await supabaseClient.from('memories')
-        .update({ likes: newCount })
-        .eq('id', memoryId);
-
+      await supabaseClient.from('memories').update({ likes: newCount }).eq('id', memoryId);
       const m = allMemories.find(x => x.id === memoryId);
       if (m) { m.likes = newCount; m.userLiked = false; }
 
@@ -760,16 +757,12 @@ async function toggleLike(memoryId, btn) {
       const newCount = realCount + 1;
       btn.classList.add('liked');
       countSpan.textContent = newCount;
-
-      await supabaseClient.from('likes')
-        .insert({ memory_id: memoryId, user_id: currentUser.id });
-      await supabaseClient.from('memories')
-        .update({ likes: newCount })
-        .eq('id', memoryId);
-
+      await supabaseClient.from('likes').insert({ memory_id: memoryId, user_id: currentUser.id });
+      await supabaseClient.from('memories').update({ likes: newCount }).eq('id', memoryId);
       const m = allMemories.find(x => x.id === memoryId);
       if (m) { m.likes = newCount; m.userLiked = true; }
     }
+
   } catch (err) {
     console.error('toggleLike error:', err);
     showToast('Could not update like. Please try again.', 'error');
