@@ -738,7 +738,7 @@ window.currentGalleryPhotos = photos;
 window.currentGalleryIndex  = 0;
 const isOwner  = currentProfile && m.user_id === currentProfile.id;
 const deleteBtn = isOwner
-? `<button class="btn-delete-memory" onclick="deleteMemory('${m.id}')"
+? `<button class="btn-delete-memory" onclick="deleteMemory('${m.id}')" 
 title="Delete this memory">🗑️ Delete</button>`
 : '';
 document.getElementById('memory-detail-content').innerHTML = `
