@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f4a33"/>
+      <stop offset="100%" stop-color="#1a7a50"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f0c060"/>
+      <stop offset="100%" stop-color="#c8952a"/>
+    </linearGradient>
+    <linearGradient id="goldGrad2" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e8b84b"/>
+      <stop offset="100%" stop-color="#fad87a"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="circleClip">
+      <circle cx="60" cy="60" r="56"/>
+    </clipPath>
+  </defs>
+
+  <!-- Outer background circle -->
+  <circle cx="60" cy="60" r="58" fill="url(#bgGrad)"/>
+
+  <!-- Outer gold ring -->
+  <circle cx="60" cy="60" r="56" fill="none" stroke="url(#goldGrad)" stroke-width="2.2" opacity="0.9"/>
+
+  <!-- Tick marks on outer ring (vault dial feel) — 12 marks -->
+  <g stroke="url(#goldGrad2)" stroke-width="1.4" opacity="0.7">
+    <line x1="60" y1="6"  x2="60" y2="11"/>
+    <line x1="60" y1="109" x2="60" y2="114"/>
+    <line x1="6"  y1="60" x2="11" y2="60"/>
+    <line x1="109" y1="60" x2="114" y2="60"/>
+    <!-- diagonal ticks -->
+    <line x1="19.5" y1="19.5" x2="23" y2="23"/>
+    <line x1="97"   y1="97"   x2="100.5" y2="100.5"/>
+    <line x1="100.5" y1="19.5" x2="97" y2="23"/>
+    <line x1="23"   y1="97"   x2="19.5" y2="100.5"/>
+    <!-- 30-degree ticks -->
+    <line x1="8.5"  y1="34.5" x2="13" y2="36.8"/>
+    <line x1="107" y1="83.5" x2="111.5" y2="85.5"/>
+    <line x1="34.5" y1="8.5" x2="36.8" y2="13"/>
+    <line x1="83.5" y1="107" x2="85.5" y2="111.5"/>
+    <line x1="85.5" y1="8.5" x2="83.2" y2="13"/>
+    <line x1="36.5" y1="107" x2="34.2" y2="111.5"/>
+    <line x1="111.5" y1="34.5" x2="107" y2="36.8"/>
+    <line x1="8.5"  y1="85.5" x2="13" y2="83.2"/>
+  </g>
+
+  <!-- Second ring — thinner inner border -->
+  <circle cx="60" cy="60" r="49" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+  <!-- Architectural arch shape — the "vault gate" -->
+  <!-- Arch background fill -->
+  <path d="M 30 78 L 30 52 Q 30 30 60 30 Q 90 30 90 52 L 90 78 Z"
+        fill="rgba(255,255,255,0.05)" stroke="url(#goldGrad)" stroke-width="1.6"/>
+
+  <!-- Arch keystone accent at top -->
+  <path d="M 54 30.5 L 60 24 L 66 30.5"
+        fill="url(#goldGrad2)" stroke="none" opacity="0.9"/>
+
+  <!-- Inner vault circle — lens/aperture -->
+  <circle cx="60" cy="60" r="18" fill="rgba(255,255,255,0.06)" stroke="url(#goldGrad2)" stroke-width="2"/>
+
+  <!-- Aperture blades — 6-blade camera aperture suggesting memory/photography -->
+  <g fill="url(#goldGrad2)" opacity="0.95" filter="url(#glow)">
+    <!-- Blade 1 -->
+    <ellipse cx="60" cy="48" rx="4.5" ry="8" transform="rotate(0 60 60)"/>
+    <!-- Blade 2 -->
+    <ellipse cx="60" cy="48" rx="4.5" ry="8" transform="rotate(60 60 60)"/>
+    <!-- Blade 3 -->
+    <ellipse cx="60" cy="48" rx="4.5" ry="8" transform="rotate(120 60 60)"/>
+    <!-- Blade 4 -->
+    <ellipse cx="60" cy="48" rx="4.5" ry="8" transform="rotate(180 60 60)"/>
+    <!-- Blade 5 -->
+    <ellipse cx="60" cy="48" rx="4.5" ry="8" transform="rotate(240 60 60)"/>
+    <!-- Blade 6 -->
+    <ellipse cx="60" cy="48" rx="4.5" ry="8" transform="rotate(300 60 60)"/>
+  </g>
+
+  <!-- Center dot -->
+  <circle cx="60" cy="60" r="4.5" fill="url(#bgGrad)" stroke="url(#goldGrad2)" stroke-width="1.5"/>
+  <circle cx="60" cy="60" r="2" fill="url(#goldGrad2)"/>
+
+  <!-- Vault handle bar at bottom of arch -->
+  <rect x="54" y="75" width="12" height="3.5" rx="1.75" fill="url(#goldGrad2)" opacity="0.9"/>
+  <rect x="57.5" y="73.5" width="5" height="2" rx="1" fill="url(#goldGrad2)" opacity="0.7"/>
+
+  <!-- Subtle shine arc at top -->
+  <path d="M 20 40 Q 60 18 100 40" stroke="rgba(255,255,255,0.07)" stroke-width="8" fill="none"/>
+</svg>
