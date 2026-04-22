@@ -73,22 +73,23 @@
   </div>
 
   <!-- Hamburger (mobile) -->
-  <button class="hamburger" id="hamburger-btn" aria-label="Toggle navigation menu" style="display:none">
+  <button class="hamburger" id="hamburger-btn" aria-label="Toggle navigation menu">
     <span></span><span></span><span></span>
   </button>
 </nav>
 
 <!-- Mobile menu -->
 <div class="mobile-menu" id="mobile-menu">
-  <a onclick="showPage('home')">🏠 Home</a>
-  <a onclick="showPage('about')">ℹ️ About</a>
-  <a id="mob-memories-link" onclick="showPage('memories')" style="display:none">📸 Memories</a>
-  <a id="mob-departments-link" onclick="showPage('departments')" style="display:none">🏛️ Departments</a>
-  <a id="mob-profile-link" onclick="showPage('profile')" style="display:none">👤 My Profile</a>
+  <button class="mobile-menu-close" onclick="document.getElementById('mobile-menu').classList.remove('open')" aria-label="Close menu">✕</button>
+  <a onclick="showPage('home');document.getElementById('mobile-menu').classList.remove('open')">🏠 Home</a>
+  <a onclick="showPage('about');document.getElementById('mobile-menu').classList.remove('open')">ℹ️ About</a>
+  <a id="mob-memories-link" onclick="showPage('memories');document.getElementById('mobile-menu').classList.remove('open')" style="display:none">📸 Memories</a>
+  <a id="mob-departments-link" onclick="showPage('departments');document.getElementById('mobile-menu').classList.remove('open')" style="display:none">🏛️ Departments</a>
+  <a id="mob-profile-link" onclick="showPage('profile');document.getElementById('mobile-menu').classList.remove('open')" style="display:none">👤 My Profile</a>
   <div class="mobile-divider"></div>
-  <a id="mob-login-link" onclick="showPage('login')">🔑 Sign In</a>
-  <a id="mob-signup-link" onclick="showPage('signup')">✨ Sign Up</a>
-  <a id="mob-logout-link" onclick="document.getElementById('btn-logout').click()" style="display:none">🚪 Sign Out</a>
+  <a id="mob-login-link" onclick="showPage('login');document.getElementById('mobile-menu').classList.remove('open')">🔑 Sign In</a>
+  <a id="mob-signup-link" onclick="showPage('signup');document.getElementById('mobile-menu').classList.remove('open')">✨ Sign Up</a>
+  <a id="mob-logout-link" onclick="document.getElementById('btn-logout').click();document.getElementById('mobile-menu').classList.remove('open')" style="display:none">🚪 Sign Out</a>
 </div>
 
 
