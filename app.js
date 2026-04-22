@@ -721,40 +721,60 @@ async function toggleLike(memoryId, btn) {
     return;
   }
 
-  const countSpan = btn.querySelector('span');
-  let count = parseInt(countSpan.textContent) || 0;
+  // Disable button during operation to prevent double-clicks
+  btn.disabled = true;
 
-  const { data: existingLike } = await supabaseClient
-    .from('likes')
-    .select('id')
-    .eq('memory_id', memoryId)
-    .eq('user_id', currentUser.id)
-    .maybeSingle();
+  try {
+    const countSpan = btn.querySelector('span');
 
-  if (existingLike) {
-    btn.classList.remove('liked');
-    countSpan.textContent = Math.max(0, count - 1);
+    // Check if user already liked this memory
+    const { data: existingLike } = await supabaseClient
+      .from('likes')
+      .select('id')
+      .eq('memory_id', memoryId)
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
 
-    await supabaseClient.from('likes').delete().eq('id', existingLike.id);
-    await supabaseClient.from('memories')
-      .update({ likes: Math.max(0, count - 1) })
-      .eq('id', memoryId);
+    // Fetch real current like count from DB to avoid stale UI counts
+    const { data: memRow } = await supabaseClient
+      .from('memories')
+      .select('likes')
+      .eq('id', memoryId)
+      .maybeSingle();
+    const realCount = (memRow && memRow.likes) ? memRow.likes : 0;
 
-    const m = allMemories.find(x => x.id === memoryId);
-    if (m) { m.likes = Math.max(0, count - 1); m.userLiked = false; }
+    if (existingLike) {
+      const newCount = Math.max(0, realCount - 1);
+      btn.classList.remove('liked');
+      countSpan.textContent = newCount;
 
-  } else {
-    btn.classList.add('liked');
-    countSpan.textContent = count + 1;
+      await supabaseClient.from('likes').delete().eq('id', existingLike.id);
+      await supabaseClient.from('memories')
+        .update({ likes: newCount })
+        .eq('id', memoryId);
 
-    await supabaseClient.from('likes')
-      .insert({ memory_id: memoryId, user_id: currentUser.id });
-    await supabaseClient.from('memories')
-      .update({ likes: count + 1 })
-      .eq('id', memoryId);
+      const m = allMemories.find(x => x.id === memoryId);
+      if (m) { m.likes = newCount; m.userLiked = false; }
 
-    const m = allMemories.find(x => x.id === memoryId);
-    if (m) { m.likes = count + 1; m.userLiked = true; }
+    } else {
+      const newCount = realCount + 1;
+      btn.classList.add('liked');
+      countSpan.textContent = newCount;
+
+      await supabaseClient.from('likes')
+        .insert({ memory_id: memoryId, user_id: currentUser.id });
+      await supabaseClient.from('memories')
+        .update({ likes: newCount })
+        .eq('id', memoryId);
+
+      const m = allMemories.find(x => x.id === memoryId);
+      if (m) { m.likes = newCount; m.userLiked = true; }
+    }
+  } catch (err) {
+    console.error('toggleLike error:', err);
+    showToast('Could not update like. Please try again.', 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 
