@@ -95,8 +95,8 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 
       // Ghost account guard
       const meta = currentUser?.user_metadata || {};
-      const hasMetadata = !!(meta.full_name || meta.student_id);
-      const isProfileBroken = !currentProfile || (!currentProfile.full_name && !currentProfile.student_id);
+      const hasMetadata = !!(meta.full_name || meta.student_email);
+      const isProfileBroken = !currentProfile || (!currentProfile.full_name && !currentProfile.student_email);
 
       if (isProfileBroken && !hasMetadata && event !== 'SIGNED_OUT') {
         console.warn('Ghost/incomplete account detected — signing out.');
@@ -137,14 +137,14 @@ async function fetchProfile() {
       const meta = currentUser.user_metadata || {};
       const needsUpdate =
         !data.full_name ||
-        !data.student_id ||
+        !data.student_email ||
         !data.department ||
         !data.batch_year;
 
-      if (needsUpdate && (meta.full_name || meta.student_id || meta.department || meta.batch_year)) {
+      if (needsUpdate && (meta.full_name || meta.student_email || meta.department || meta.batch_year)) {
         const patch = {};
         if (!data.full_name && meta.full_name) patch.full_name = meta.full_name;
-        if (!data.student_id && meta.student_id) patch.student_id = meta.student_id;
+        if (!data.student_email && meta.student_email) patch.student_email = meta.student_email;
         if (!data.department && meta.department) patch.department = meta.department;
         if (!data.batch_year && meta.batch_year) patch.batch_year = parseInt(meta.batch_year);
 
@@ -169,14 +169,14 @@ async function fetchProfile() {
 
     // Profile row missing (or query error) -> try create only if metadata exists
     const meta = currentUser.user_metadata || {};
-    if (meta.full_name || meta.student_id) {
+    if (meta.full_name || meta.student_email) {
       const { data: created, error: createError } = await supabaseClient
         .from("profiles")
         .upsert(
           {
             id: currentUser.id,
             full_name: meta.full_name || null,
-            student_id: meta.student_id || null,
+            student_email: meta.student_email || null,
             department: meta.department || null,
             batch_year: meta.batch_year ? parseInt(meta.batch_year) : null,
           },
@@ -259,16 +259,27 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     return;
   }
 
-  const fullName    = document.getElementById('signup-name').value.trim();
-  const studentId   = document.getElementById('signup-student-id').value.trim();
-  const department  = document.getElementById('signup-department').value;
-  const batchYear   = parseInt(document.getElementById('signup-batch').value);
-  const email       = document.getElementById('signup-email').value.trim();
-  const password    = document.getElementById('signup-password').value;
-  const termsAgreed = document.getElementById('signup-terms').checked;
+  const fullName          = document.getElementById('signup-name').value.trim();
+  const studentEmail      = document.getElementById('signup-student-email').value.trim().toLowerCase();
+  const studentEmailConf  = document.getElementById('signup-student-email-confirm').value.trim().toLowerCase();
+  const department        = document.getElementById('signup-department').value;
+  const batchYear         = parseInt(document.getElementById('signup-batch').value) || 0;
+  const email             = document.getElementById('signup-email').value.trim();
+  const password          = document.getElementById('signup-password').value;
+  const termsAgreed       = document.getElementById('signup-terms').checked;
 
-  if (!fullName || !studentId || !department || !batchYear || !email || !password) {
+  if (!fullName || !studentEmail || !studentEmailConf || !department || !email || !password) {
     showAlert('signup-alert', 'Please fill in all required fields to create your account.', 'error');
+    return;
+  }
+
+  if (studentEmail !== studentEmailConf) {
+    showAlert('signup-alert', '❌ University email addresses do not match. Please retype carefully.', 'error');
+    return;
+  }
+
+  if (!studentEmail.endsWith('@nutech.edu.pk')) {
+    showAlert('signup-alert', '❌ Please enter a valid NUTECH university email ending in @nutech.edu.pk.', 'error');
     return;
   }
 
@@ -277,13 +288,23 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     return;
   }
 
-  if (batchYear < 2021 || batchYear > 2026) {
-    showAlert('signup-alert', 'Please select a valid batch year between 2021 and 2026.', 'error');
+  if (!termsAgreed) {
+    showAlert('signup-alert', 'Please read and agree to our Terms of Use and Privacy Policy to continue.', 'error');
     return;
   }
 
-  if (!termsAgreed) {
-    showAlert('signup-alert', 'Please read and agree to our Terms of Use and Privacy Policy to continue.', 'error');
+  setLoading('btn-signup', true, 'Checking…');
+
+  // Check university email uniqueness before calling auth.signUp
+  const { data: existingProfile } = await supabaseClient
+    .from('profiles')
+    .select('id')
+    .eq('student_email', studentEmail)
+    .maybeSingle();
+
+  if (existingProfile) {
+    setLoading('btn-signup', false, 'Create My NUTECH Vault Account');
+    showAlert('signup-alert', '❌ An account is already linked to this university email. Each student email can only be used once. Please sign in instead.', 'error');
     return;
   }
 
@@ -295,10 +316,10 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     password,
     options: {
       data: {
-        full_name:  fullName,
-        student_id: studentId,
-        department: department,
-        batch_year: batchYear
+        full_name:     fullName,
+        student_email: studentEmail,
+        department:    department,
+        batch_year:    batchYear || null
       }
     }
   });
@@ -327,11 +348,11 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
   if (data.session) {
     // Supabase confirmed instantly (email confirmation disabled in dashboard) — go straight in
     await supabaseClient.from('profiles').upsert({
-      id:         data.user.id,
-      full_name:  fullName,
-      student_id: studentId,
-      department: department,
-      batch_year: batchYear
+      id:            data.user.id,
+      full_name:     fullName,
+      student_email: studentEmail,
+      department:    department,
+      batch_year:    batchYear || null
     }, { onConflict: 'id' });
 
     showToast('🎉 Welcome to NUTECH Vault! Your account has been created successfully.', 'success');
@@ -400,12 +421,12 @@ document.getElementById('otp-form').addEventListener('submit', async (e) => {
   if (data?.user) {
     try {
       await supabaseClient.from('profiles').upsert({
-        id:         data.user.id,
-        full_name:  data.user.user_metadata?.full_name  || null,
-        student_id: data.user.user_metadata?.student_id || null,
-        department: data.user.user_metadata?.department || null,
-        batch_year: data.user.user_metadata?.batch_year
-                      ? parseInt(data.user.user_metadata.batch_year) : null
+        id:            data.user.id,
+        full_name:     data.user.user_metadata?.full_name     || null,
+        student_email: data.user.user_metadata?.student_email || null,
+        department:    data.user.user_metadata?.department     || null,
+        batch_year:    data.user.user_metadata?.batch_year
+                         ? parseInt(data.user.user_metadata.batch_year) : null
       }, { onConflict: 'id' });
     } catch (_) {}
   }
@@ -456,8 +477,9 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAlert('login-alert');
 
-  const email    = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
+  const email      = document.getElementById('login-email').value.trim();
+  const password   = document.getElementById('login-password').value;
+  const rememberMe = document.getElementById('login-remember').checked;
 
   if (!email || !password) {
     showAlert('login-alert', 'Please enter both your email address and password.', 'error');
@@ -501,6 +523,14 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   setLoading('btn-login', false, 'Sign In to NUTECH Vault');
 
   if (loginSuccess) {
+    // Handle Remember Me — store preference; Supabase session is always persisted
+    if (rememberMe) {
+      localStorage.setItem('nutech_remember_me', '1');
+      localStorage.setItem('nutech_remember_until', String(Date.now() + 30 * 24 * 60 * 60 * 1000));
+    } else {
+      localStorage.removeItem('nutech_remember_me');
+      localStorage.removeItem('nutech_remember_until');
+    }
     showToast('✅ Welcome back! You\'ve successfully signed in.', 'success');
     // Fetch profile in background — do NOT await so navigation is never blocked
     try { fetchProfile().then(() => updateNavForUser()); } catch (_) {}
@@ -511,11 +541,16 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
 // ── Sign Out ──────────────────────────────────────────────
 document.getElementById('btn-logout').addEventListener('click', async () => {
+  localStorage.removeItem('nutech_remember_me');
+  localStorage.removeItem('nutech_remember_until');
   await supabaseClient.auth.signOut();
   showToast('You have been signed out. Come back soon!', 'info');
 });
 
-// ── Forgot Password — send reset email ───────────────────
+// ── Forgot Password — 6-digit OTP flow (60-second expiry) ──
+let resetOtpEmail = '';
+let resetOtpTimerInterval = null;
+
 document.getElementById('reset-password-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAlert('reset-alert');
@@ -527,25 +562,139 @@ document.getElementById('reset-password-form').addEventListener('submit', async 
     return;
   }
 
-  setLoading('btn-reset', true, 'Sending…');
+  setLoading('btn-reset', true, 'Sending Code…');
 
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + window.location.pathname
+  // Use Supabase built-in OTP (signInWithOtp sends a 6-digit magic code, no new user created)
+  const { error } = await supabaseClient.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: false }
   });
 
-  setLoading('btn-reset', false, 'Send Reset Link');
+  setLoading('btn-reset', false, 'Send 6-Digit Code');
 
-  if (error) {
-    showAlert('reset-alert', error.message, 'error');
+  // Always show step 2 (don't reveal whether email exists in system)
+  resetOtpEmail = email;
+  document.getElementById('reset-otp-email-display').textContent = email;
+  document.getElementById('reset-step-1').style.display = 'none';
+  document.getElementById('reset-step-2').style.display = 'block';
+  clearAlert('reset-alert');
+
+  // Start 60-second countdown
+  let secondsLeft = 60;
+  const timerEl = document.getElementById('reset-otp-timer');
+  if (timerEl) timerEl.textContent = secondsLeft;
+  clearInterval(resetOtpTimerInterval);
+  resetOtpTimerInterval = setInterval(() => {
+    secondsLeft--;
+    if (timerEl) timerEl.textContent = secondsLeft;
+    if (secondsLeft <= 0) {
+      clearInterval(resetOtpTimerInterval);
+      if (timerEl) timerEl.textContent = '0';
+      showAlert('reset-alert', '⏰ Code expired. Please click Resend to get a new one.', 'error');
+    }
+  }, 1000);
+});
+
+// ── OTP + new password submit ──────────────────────────
+document.getElementById('reset-otp-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearAlert('reset-alert');
+
+  const token   = document.getElementById('reset-otp-code').value.trim().replace(/\s/g, '');
+  const newPass = document.getElementById('reset-new-password').value;
+
+  if (!token || token.length !== 6) {
+    showAlert('reset-alert', '⚠️ Please enter the 6-digit code from your email.', 'error');
+    return;
+  }
+  if (!newPass || newPass.length < 6) {
+    showAlert('reset-alert', '⚠️ Password must be at least 6 characters.', 'error');
+    return;
+  }
+  if (!resetOtpEmail) {
+    showAlert('reset-alert', '⚠️ Session expired. Please start over.', 'error');
     return;
   }
 
-  // Always show success — don't reveal whether the email exists
-  showAlert('reset-alert',
-    '✅ If an account with that email exists, a password reset link has been sent. Please check your inbox (and spam folder).',
-    'success');
+  setLoading('btn-verify-reset-otp', true, 'Verifying…');
+
+  // Verify the OTP — this signs the user in automatically
+  const { data, error } = await supabaseClient.auth.verifyOtp({
+    email: resetOtpEmail,
+    token: token,
+    type:  'email'
+  });
+
+  if (error) {
+    setLoading('btn-verify-reset-otp', false, 'Reset Password');
+    const msg = error.message.toLowerCase();
+    if (msg.includes('expired') || msg.includes('invalid') || msg.includes('not found')) {
+      showAlert('reset-alert', '❌ Invalid or expired code. Request a new one using Resend.', 'error');
+    } else {
+      showAlert('reset-alert', escapeHTML(error.message), 'error');
+    }
+    return;
+  }
+
+  // Now update the password
+  const { error: updateError } = await supabaseClient.auth.updateUser({ password: newPass });
+  setLoading('btn-verify-reset-otp', false, 'Reset Password');
+
+  if (updateError) {
+    showAlert('reset-alert', escapeHTML(updateError.message), 'error');
+    return;
+  }
+
+  clearInterval(resetOtpTimerInterval);
+  resetOtpEmail = '';
+
+  showToast('✅ Password reset successfully! You are now signed in.', 'success');
+  // Reset the form back for next time
+  document.getElementById('reset-step-1').style.display = 'block';
+  document.getElementById('reset-step-2').style.display = 'none';
   document.getElementById('reset-password-form').reset();
+  document.getElementById('reset-otp-form').reset();
+  showPage('memories');
 });
+
+// ── Resend OTP for password reset ─────────────────────
+async function resendResetOtp() {
+  if (!resetOtpEmail) return;
+  clearAlert('reset-alert');
+
+  const resendLink = document.getElementById('reset-otp-resend');
+  if (resendLink) { resendLink.style.pointerEvents = 'none'; resendLink.textContent = 'Sending…'; }
+
+  const { error } = await supabaseClient.auth.signInWithOtp({
+    email: resetOtpEmail,
+    options: { shouldCreateUser: false }
+  });
+
+  if (resendLink) { resendLink.textContent = 'Resend code'; resendLink.style.pointerEvents = ''; }
+
+  if (error) {
+    showAlert('reset-alert', escapeHTML(error.message), 'error');
+    return;
+  }
+
+  // Restart 60-second timer
+  let secondsLeft = 60;
+  const timerEl = document.getElementById('reset-otp-timer');
+  if (timerEl) timerEl.textContent = secondsLeft;
+  clearInterval(resetOtpTimerInterval);
+  resetOtpTimerInterval = setInterval(() => {
+    secondsLeft--;
+    if (timerEl) timerEl.textContent = secondsLeft;
+    if (secondsLeft <= 0) {
+      clearInterval(resetOtpTimerInterval);
+      if (timerEl) timerEl.textContent = '0';
+    }
+  }, 1000);
+
+  document.getElementById('reset-otp-code').value = '';
+  document.getElementById('reset-otp-code').focus();
+  showAlert('reset-alert', '📧 A new 6-digit code has been sent to your email.', 'success');
+}
 
 // ── New Password — set password after clicking reset link ─
 document.getElementById('new-password-form').addEventListener('submit', async (e) => {
@@ -601,7 +750,7 @@ async function loadMemories() {
         *,
         profiles (
           full_name,
-          student_id,
+          student_email,
           department,
           batch_year
         )
@@ -2201,7 +2350,7 @@ async function loadProfile() {
   await fetchProfile();
 
   const p = currentProfile;
-  if (!p || (!p.full_name && !p.student_id)) {
+  if (!p || (!p.full_name && !p.student_email)) {
     // Ghost/incomplete account — sign out and redirect to signup
     showToast('⚠️ Your account is incomplete. Please sign up again to continue.', 'error');
     await supabaseClient.auth.signOut();
@@ -2213,7 +2362,7 @@ async function loadProfile() {
   document.getElementById('profile-avatar-initials').textContent = initials;
   document.getElementById('profile-display-name').textContent    = p.full_name || 'No name set';
   document.getElementById('profile-display-id').textContent      =
-    p.student_id ? `Student ID: ${p.student_id}` : currentUser.email;
+    p.student_email ? `🎓 ${p.student_email}` : currentUser.email;
 
   if (p.department) {
     const badge = document.getElementById('profile-badge-dept');
@@ -2226,10 +2375,10 @@ async function loadProfile() {
     badge.querySelector('span').textContent = `Batch ${p.batch_year}`;
   }
 
-  document.getElementById('edit-full-name').value  = p.full_name   || '';
-  document.getElementById('edit-student-id').value = p.student_id  || '';
-  document.getElementById('edit-department').value = p.department  || '';
-  document.getElementById('edit-batch-year').value = p.batch_year  || '';
+  document.getElementById('edit-full-name').value     = p.full_name    || '';
+  document.getElementById('edit-student-email').value = p.student_email || '';
+  document.getElementById('edit-department').value    = p.department   || '';
+  document.getElementById('edit-batch-year').value    = p.batch_year   || '';
 
   loadUserMemories();
 }
@@ -2326,7 +2475,6 @@ document.getElementById('save-profile-form').addEventListener('submit', async (e
   e.preventDefault();
 
   const fullName  = document.getElementById('edit-full-name').value.trim();
-  const studentId = document.getElementById('edit-student-id').value.trim();
   const dept      = document.getElementById('edit-department').value;
   const batchYear = parseInt(document.getElementById('edit-batch-year').value) || null;
 
@@ -2337,9 +2485,9 @@ document.getElementById('save-profile-form').addEventListener('submit', async (e
 
   const updates = {
     full_name:  fullName,
-    student_id: studentId || null,
     department: dept || null,
     batch_year: batchYear
+    // student_email is read-only — set at signup and cannot be changed
   };
 
   setLoading('btn-save-profile', true, 'Saving…');
@@ -2489,8 +2637,8 @@ function showToast(message, type = 'info') {
 
       // Ghost guard — only sign out if profile is broken AND user has no metadata
       const meta = currentUser?.user_metadata || {};
-      const hasMetadata = !!(meta.full_name || meta.student_id);
-      const isProfileBroken = !currentProfile || (!currentProfile.full_name && !currentProfile.student_id);
+      const hasMetadata = !!(meta.full_name || meta.student_email);
+      const isProfileBroken = !currentProfile || (!currentProfile.full_name && !currentProfile.student_email);
 
       if (isProfileBroken && !hasMetadata) {
         console.warn('Ghost account detected on init — signing out.');
@@ -2512,4 +2660,12 @@ function showToast(message, type = 'info') {
   }
 
   showPage('home');
+
+  // Remember Me expiry check — if set and expired, sign the user out
+  const rememberUntil = parseInt(localStorage.getItem('nutech_remember_until') || '0');
+  if (rememberUntil && Date.now() > rememberUntil) {
+    localStorage.removeItem('nutech_remember_me');
+    localStorage.removeItem('nutech_remember_until');
+    await supabaseClient.auth.signOut();
+  }
 })();
