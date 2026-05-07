@@ -370,7 +370,7 @@ For questions or inquiries:
 
 <div align="center">
 
-**Made with ❤️ by the NUTECH Team**
+**Made with ❤️ by Ahmad Komail Zafari**
 
 [⬆ back to top](#nutech-vault)
 
